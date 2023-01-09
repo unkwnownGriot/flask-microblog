@@ -7,6 +7,7 @@ from hashlib import md5
 import jwt
 from time import time
 from app.search import add_index,remove_index,query_index
+import json
 
 
 #heere we define a followers and followed association table
@@ -14,6 +15,17 @@ from app.search import add_index,remove_index,query_index
 followers = db.Table('followers',
 db.Column('follower_id',db.Integer(),db.ForeignKey('user.id')),
 db.Column('followed_id',db.Integer(),db.ForeignKey('user.id')))
+
+
+class Notifications(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.Float, index=True, default=time)
+    payload_json = db.Column(db.Text)
+
+    def get_data(self):
+        return json.loads(str(self.payload_json))
 
 #define the model class we will use in the application
 class User(UserMixin,db.Model):
@@ -33,7 +45,24 @@ class User(UserMixin,db.Model):
     secondaryjoin=(followers.c.followed_id== id),
     backref=db.backref('followers',lazy='dynamic'), lazy='dynamic')
 
+    messages_sent = db.relationship('Message',foreign_keys='Message.sender_id',
+     backref='author', lazy='dynamic')
+    messages_received = db.relationship('Message',foreign_keys='Message.recipient_id',
+     backref='recipient', lazy='dynamic')
+    last_message_read_time = db.Column(db.DateTime)
+
+    notifications = db.relationship('Notifications', backref='user',
+                                    lazy='dynamic')
+
+    def new_messages(self):
+        last_read_time = self.last_message_read_time or datetime(1900,1,1)
+        return Message.query.filter_by(recipient=self).filter(Message.timestamp > last_read_time).count()
     
+    def add_notification(self, name, data):
+        self.notifications.filter_by(name=name).delete()
+        n = Notifications(name=name, payload_json=json.dumps(data), user=self)
+        db.session.add(n)
+        return n
 
     #define a method to follow or unfollow user
     def follow(self,user):
@@ -89,6 +118,17 @@ class User(UserMixin,db.Model):
         return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(digest,size)
 
 
+
+
+class Message(db.Model):
+        id= db.Column(db.Integer,primary_key=True)
+        sender_id= db.Column(db.Integer, db.ForeignKey('user.id'))
+        recipient_id= db.Column(db.Integer,db.ForeignKey('user.id'))
+        body= db.Column(db.String(140))
+        timestamp = db.Column(db.DateTime, index=True,default=datetime.utcnow)
+
+        def __repr__(self) -> str:
+            return '<Message {}>'.format(self.body)
 
 class SearchableMixin(object):
     @classmethod

@@ -15,9 +15,9 @@ class Config(object):
     #send a mail with error stack and trace
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') or False
-    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL') or True
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS')
+    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL')
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEBUG = os.environ.get('MAIL_DEBUG')
-    ADMINS = os.environ.get('ADMINS')
+    MAIL_DEBUG = True
+    ADMINS = 'johnabalo228@gmail.com'
